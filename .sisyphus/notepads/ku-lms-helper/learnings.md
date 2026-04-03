@@ -15,3 +15,5 @@
 - Biome's `noImportantStyles` warning in the reduced-motion block can be cleared by relying on source order instead of `!important` without affecting the generated build output.
 - Transcript extraction is more reliable when it tries the player iframe's VTT/config path first, then auto-clicks a transcript toggle in the page or iframe before falling back to DOM rows.
 - For transcript UX, auto-downloading TXT and replacing the preview with a compact success state avoids an unnecessary second click without affecting quiz preview/download flows.
+- KU LMS transcript extraction is most robust when it keeps polling `window.uniPlayerConfig` in the iframe for longer and only uses DOM transcript rows as a passive fallback, without trying to open the transcript panel itself.
+- If the popup removes preview panels entirely, button-local loading/success/error states plus one short status line are enough to preserve clear feedback while keeping the extension UI minimal.

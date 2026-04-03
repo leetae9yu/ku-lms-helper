@@ -56,71 +56,8 @@
               🎥 자막 추출하기
             </button>
           </div>
+          <p id="action-status" class="action-status hidden" role="status" aria-live="polite" hidden></p>
         </div>
-
-        <section id="results-panel" class="results-panel hidden" aria-live="polite" hidden>
-          <div class="results-header">
-            <div>
-              <p class="results-eyebrow">추출 결과</p>
-              <h3 id="results-title" class="results-title">미리보기</h3>
-            </div>
-            <span id="result-count-badge" class="result-count-badge hidden" hidden></span>
-          </div>
-
-          <div id="result-loading" class="result-feedback hidden" role="status" aria-live="polite" hidden>
-            <div class="loading-spinner compact" aria-hidden="true"></div>
-            <p id="result-loading-message" class="state-description result-feedback-text">
-              추출 중입니다...
-            </p>
-            <div class="loading-progress compact" aria-hidden="true">
-              <span class="loading-progress-bar"></span>
-            </div>
-          </div>
-
-          <div id="result-error" class="result-feedback hidden" aria-live="assertive" hidden>
-            <p id="result-error-message" class="state-description error-text result-feedback-text">
-              추출 중 오류가 발생했습니다.
-            </p>
-            <button id="result-retry-btn" class="action-button secondary" type="button">
-              다시 시도
-            </button>
-          </div>
-
-          <div id="result-content" class="result-content hidden" hidden>
-            <p id="results-meta" class="results-meta"></p>
-            <div id="results-preview" class="results-preview"></div>
-            <div class="download-actions" role="group" aria-label="다운로드 형식 선택">
-              <div class="tooltip-anchor">
-                <button
-                  id="download-txt-btn"
-                  class="action-button secondary"
-                  type="button"
-                  aria-describedby="download-txt-tooltip"
-                  disabled
-                >
-                  TXT 다운로드
-                </button>
-                <span id="download-txt-tooltip" class="tooltip" role="tooltip">
-                  바로 읽거나 공유하기 쉬운 텍스트 형식입니다.
-                </span>
-              </div>
-              <div class="tooltip-anchor">
-                <button
-                  id="download-json-btn"
-                  class="action-button secondary"
-                  type="button"
-                  aria-describedby="download-json-tooltip"
-                  disabled
-                >
-                  JSON 다운로드
-                </button>
-                <span id="download-json-tooltip" class="tooltip" role="tooltip">
-                  후처리나 자동화에 적합한 구조화 데이터입니다.
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
 
         <div id="error-state" class="state-container hidden" hidden>
           <div class="state-icon" aria-hidden="true">⚠️</div>

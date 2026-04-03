@@ -3,8 +3,8 @@
  */
 import '../styles/global.css';
 import './popup.css';
-import { formatQuizOutput, type QuizExtraction } from '../lib/quiz';
-import { downloadTranscriptAsFile, formatTranscriptOutput, type TranscriptDocument } from '../lib/transcript';
+import { downloadQuizAsFile, type QuizExtraction } from '../lib/quiz';
+import { downloadTranscriptAsFile, type TranscriptDocument } from '../lib/transcript';
 import {
   type ExtensionMessage,
   type ExtensionResponse,
@@ -24,32 +24,16 @@ const elements = {
   errorMessage: document.getElementById('error-message'),
   extractQuizBtn: document.getElementById('extract-quiz-btn'),
   extractTranscriptBtn: document.getElementById('extract-transcript-btn'),
+  actionStatus: document.getElementById('action-status'),
   retryBtn: document.getElementById('retry-btn'),
-  resultsPanel: document.getElementById('results-panel'),
-  resultsTitle: document.getElementById('results-title'),
-  resultCountBadge: document.getElementById('result-count-badge'),
-  resultLoading: document.getElementById('result-loading'),
-  resultLoadingMessage: document.getElementById('result-loading-message'),
-  resultError: document.getElementById('result-error'),
-  resultErrorMessage: document.getElementById('result-error-message'),
-  resultRetryBtn: document.getElementById('result-retry-btn'),
-  resultContent: document.getElementById('result-content'),
-  resultsMeta: document.getElementById('results-meta'),
-  resultsPreview: document.getElementById('results-preview'),
-  downloadActions: document.querySelector('.download-actions'),
-  downloadTxtBtn: document.getElementById('download-txt-btn'),
-  downloadJsonBtn: document.getElementById('download-json-btn'),
   themeToggleBtn: document.getElementById('theme-toggle-btn'),
   themeToggleIcon: document.getElementById('theme-toggle-icon'),
 } as const;
 
 type PopupState = 'loading' | 'ready' | 'error';
-type ExtractionRequestType = 'EXTRACT_QUIZ' | 'EXTRACT_TRANSCRIPT';
-type ExtractedResult =
-  | { kind: 'quiz'; data: QuizExtraction }
-  | { kind: 'transcript'; data: TranscriptDocument }
-  | null;
 type ThemePreference = 'system' | 'light' | 'dark';
+type ActionKind = 'quiz' | 'transcript';
+type ActionStatusTone = 'loading' | 'success' | 'error';
 
 const BUTTON_LABELS = {
   quiz: '📝 퀴즈 추출하기',
@@ -69,13 +53,16 @@ const THEME_ICONS = {
   light: '☀',
 } as const;
 
-const QUIZ_PREVIEW_COUNT = 3;
+const BUTTON_RESET_DELAY_MS = 2000;
 const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-let currentPageInfo: PageInfoMessage | null = null;
-let lastExtractionRequest: ExtractionRequestType | null = null;
-let latestExtraction: ExtractedResult = null;
 let currentThemePreference: ThemePreference = 'system';
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
 
 function setElementHidden(element: HTMLElement | null, hidden: boolean): void {
   if (!element) {
@@ -193,55 +180,33 @@ function showState(state: PopupState): void {
   }
 }
 
-function showResultsPanel(): void {
-  setElementHidden(elements.resultsPanel, false);
-}
-
-function hideResultsPanel(): void {
-  setElementHidden(elements.resultsPanel, true);
-}
-
-function setDownloadButtonsEnabled(enabled: boolean): void {
-  const txtButton = elements.downloadTxtBtn as HTMLButtonElement | null;
-  const jsonButton = elements.downloadJsonBtn as HTMLButtonElement | null;
-
-  if (txtButton) {
-    txtButton.disabled = !enabled;
-  }
-
-  if (jsonButton) {
-    jsonButton.disabled = !enabled;
-  }
-}
-
-function setDownloadActionsVisible(visible: boolean): void {
-  setElementHidden(elements.downloadActions as HTMLElement | null, !visible);
-}
-
-function setResultsPreviewVisible(visible: boolean): void {
-  setElementHidden(elements.resultsPreview, !visible);
-}
-
-function setResultCountBadge(text: string | null): void {
-  if (!elements.resultCountBadge) {
+function setActionStatus(message: string | null, tone?: ActionStatusTone): void {
+  if (!elements.actionStatus) {
     return;
   }
 
-  if (!text) {
-    elements.resultCountBadge.textContent = '';
-    setElementHidden(elements.resultCountBadge, true);
+  if (!message) {
+    elements.actionStatus.textContent = '';
+    elements.actionStatus.removeAttribute('data-tone');
+    setElementHidden(elements.actionStatus, true);
     return;
   }
 
-  elements.resultCountBadge.textContent = text;
-  setElementHidden(elements.resultCountBadge, false);
+  elements.actionStatus.textContent = message;
+  if (tone) {
+    elements.actionStatus.setAttribute('data-tone', tone);
+  } else {
+    elements.actionStatus.removeAttribute('data-tone');
+  }
+
+  setElementHidden(elements.actionStatus, false);
 }
 
-function setActionButtonsDisabled(disabled: boolean): void {
+function setActionButtonsDisabled(disabled: boolean, loadingKind: ActionKind | null = null): void {
   const quizButton = elements.extractQuizBtn as HTMLButtonElement | null;
   const transcriptButton = elements.extractTranscriptBtn as HTMLButtonElement | null;
-  const quizLoading = disabled && lastExtractionRequest === 'EXTRACT_QUIZ';
-  const transcriptLoading = disabled && lastExtractionRequest === 'EXTRACT_TRANSCRIPT';
+  const quizLoading = loadingKind === 'quiz';
+  const transcriptLoading = loadingKind === 'transcript';
 
   if (elements.appRoot) {
     elements.appRoot.setAttribute('data-busy', String(disabled));
@@ -249,61 +214,38 @@ function setActionButtonsDisabled(disabled: boolean): void {
 
   if (quizButton) {
     quizButton.disabled = disabled;
-    quizButton.textContent = quizLoading ? '퀴즈 추출 중...' : BUTTON_LABELS.quiz;
+    quizButton.textContent = quizLoading ? '추출 중...' : BUTTON_LABELS.quiz;
     if (quizLoading) {
       quizButton.setAttribute('data-loading', 'true');
     } else {
       quizButton.removeAttribute('data-loading');
     }
+    quizButton.removeAttribute('data-status');
     quizButton.setAttribute('aria-busy', String(quizLoading));
   }
 
   if (transcriptButton) {
     transcriptButton.disabled = disabled;
-    transcriptButton.textContent = transcriptLoading
-      ? '자막 추출 중...'
-      : BUTTON_LABELS.transcript;
+    transcriptButton.textContent = transcriptLoading ? '추출 중...' : BUTTON_LABELS.transcript;
     if (transcriptLoading) {
       transcriptButton.setAttribute('data-loading', 'true');
     } else {
       transcriptButton.removeAttribute('data-loading');
     }
+    transcriptButton.removeAttribute('data-status');
     transcriptButton.setAttribute('aria-busy', String(transcriptLoading));
   }
 }
 
-function resetResultsPanel(): void {
-  latestExtraction = null;
-  lastExtractionRequest = null;
-  hideResultsPanel();
-  setElementHidden(elements.resultLoading, true);
-  setElementHidden(elements.resultError, true);
-  setElementHidden(elements.resultContent, true);
-  setResultCountBadge(null);
+function resetActionFeedback(clearStatus = true): void {
   setActionButtonsDisabled(false);
-  setDownloadButtonsEnabled(false);
-  setDownloadActionsVisible(true);
-  setResultsPreviewVisible(false);
-
-  if (elements.resultsTitle) {
-    elements.resultsTitle.textContent = '미리보기';
-  }
-
-  if (elements.resultsMeta) {
-    elements.resultsMeta.textContent = '';
-  }
-
-  if (elements.resultLoadingMessage) {
-    elements.resultLoadingMessage.textContent = '추출 중입니다...';
-  }
-
-  if (elements.resultsPreview) {
-    elements.resultsPreview.replaceChildren();
+  if (clearStatus) {
+    setActionStatus(null);
   }
 }
 
 function showError(message: string): void {
-  resetResultsPanel();
+  resetActionFeedback();
 
   if (elements.errorMessage) {
     elements.errorMessage.textContent = message;
@@ -369,259 +311,60 @@ async function queryPageInfo(): Promise<PageInfoMessage> {
   return response;
 }
 
-function showResultLoading(message: string, requestType: ExtractionRequestType): void {
-  showResultsPanel();
-  lastExtractionRequest = requestType;
-  latestExtraction = null;
-  setActionButtonsDisabled(true);
-  setDownloadButtonsEnabled(false);
-  setDownloadActionsVisible(requestType === 'EXTRACT_QUIZ');
-  setResultsPreviewVisible(false);
-  setElementHidden(elements.resultError, true);
-  setElementHidden(elements.resultContent, true);
-  setElementHidden(elements.resultLoading, false);
+function setButtonFeedback(kind: ActionKind, label: string, status: 'success' | 'error'): void {
+  const button = kind === 'quiz' ? elements.extractQuizBtn : elements.extractTranscriptBtn;
+  const targetButton = button as HTMLButtonElement | null;
 
-  if (elements.resultsTitle) {
-    elements.resultsTitle.textContent = requestType === 'EXTRACT_QUIZ' ? '퀴즈 미리보기 준비 중' : '자막 미리보기 준비 중';
-  }
-
-  if (elements.resultLoadingMessage) {
-    elements.resultLoadingMessage.textContent = message;
-  }
-
-  if (elements.resultsMeta) {
-    elements.resultsMeta.textContent = '';
-  }
-
-  if (elements.resultsPreview) {
-    elements.resultsPreview.replaceChildren();
-  }
-
-  setResultCountBadge(null);
-}
-
-function showResultError(message: string): void {
-  showResultsPanel();
-  setActionButtonsDisabled(false);
-  setDownloadButtonsEnabled(false);
-  setElementHidden(elements.resultLoading, true);
-  setElementHidden(elements.resultContent, true);
-  setElementHidden(elements.resultError, false);
-
-  if (elements.resultsTitle) {
-    elements.resultsTitle.textContent = '추출에 실패했습니다';
-  }
-
-  if (elements.resultErrorMessage) {
-    elements.resultErrorMessage.textContent = message;
-  }
-
-  setResultCountBadge(null);
-}
-
-function createPreviewCard(title: string, badgeText?: string): HTMLElement {
-  const card = document.createElement('article');
-  card.className = 'preview-card';
-
-  const header = document.createElement('div');
-  header.className = 'preview-card-header';
-
-  const heading = document.createElement('h4');
-  heading.className = 'preview-card-title';
-  heading.textContent = title;
-  header.appendChild(heading);
-
-  if (badgeText) {
-    const badge = document.createElement('span');
-    badge.className = 'preview-card-badge';
-    badge.textContent = badgeText;
-    header.appendChild(badge);
-  }
-
-  card.appendChild(header);
-  return card;
-}
-
-function createPreviewText(text: string): HTMLParagraphElement {
-  const paragraph = document.createElement('p');
-  paragraph.className = 'preview-card-text';
-  paragraph.textContent = text;
-  return paragraph;
-}
-
-function renderQuizPreview(result: QuizExtraction): void {
-  if (!elements.resultsPreview || !elements.resultsMeta || !elements.resultsTitle) {
+  if (!targetButton) {
     return;
   }
 
-  setDownloadActionsVisible(true);
-  setResultsPreviewVisible(true);
-  elements.resultsTitle.textContent = result.meta.title || '퀴즈 추출 미리보기';
-  elements.resultsMeta.textContent = [
-    `총 ${result.questions.length}문항`,
-    result.meta.score ? `점수 ${result.meta.score}` : null,
-    result.meta.duration ? `소요 ${result.meta.duration}` : null,
-  ].filter(Boolean).join(' · ');
-
-  setResultCountBadge(`${result.questions.length}문항`);
-  elements.resultsPreview.replaceChildren();
-
-  result.questions.slice(0, QUIZ_PREVIEW_COUNT).forEach((question) => {
-    const questionText = question.text || question.html || '문항 텍스트 없음';
-    const card = createPreviewCard(`문제 ${question.index}`, `${question.answers.length}개 선택지`);
-    card.appendChild(createPreviewText(questionText));
-
-    const answers = document.createElement('div');
-    answers.className = 'preview-answer-list';
-
-    question.answers.slice(0, 4).forEach((answer) => {
-      const line = document.createElement('div');
-      line.className = 'preview-answer';
-
-      if (answer.isCorrect) {
-        line.classList.add('is-correct');
-      }
-
-      if (answer.isSelected) {
-        line.classList.add('is-selected');
-      }
-
-      const index = document.createElement('span');
-      index.className = 'preview-answer-index';
-      index.textContent = `${answer.index}.`;
-
-      const text = document.createElement('span');
-      text.className = 'preview-answer-text';
-      text.textContent = answer.text || answer.html || '선택지 텍스트 없음';
-
-      line.append(index, text);
-
-      if (answer.isCorrect) {
-        const marker = document.createElement('span');
-        marker.className = 'preview-answer-marker';
-        marker.textContent = '정답';
-        line.appendChild(marker);
-      }
-
-      answers.appendChild(line);
-    });
-
-    card.appendChild(answers);
-    elements.resultsPreview?.appendChild(card);
-  });
+  targetButton.textContent = label;
+  targetButton.setAttribute('data-status', status);
+  targetButton.removeAttribute('data-loading');
+  targetButton.setAttribute('aria-busy', 'false');
 }
 
-function showExtractedResult(result: ExtractedResult): void {
-  if (!result) {
-    return;
-  }
+async function runActionWithFeedback<T>(
+  kind: ActionKind,
+  options: {
+    loadingMessage: string;
+    successMessage: string;
+    onSuccess: (result: T) => void;
+    action: () => Promise<T>;
+    errorMessage: string;
+  },
+): Promise<void> {
+  setActionButtonsDisabled(true, kind);
+  setActionStatus(options.loadingMessage, 'loading');
 
-  showResultsPanel();
-  setActionButtonsDisabled(false);
-  setDownloadButtonsEnabled(true);
-  setElementHidden(elements.resultLoading, true);
-  setElementHidden(elements.resultError, true);
-  setElementHidden(elements.resultContent, false);
-
-  if (result.kind === 'quiz') {
-    renderQuizPreview(result.data);
-    return;
-  }
-}
-
-function showTranscriptDownloadSuccess(result: TranscriptDocument): void {
-  showResultsPanel();
-  setActionButtonsDisabled(false);
-  setDownloadButtonsEnabled(false);
-  setDownloadActionsVisible(false);
-  setResultsPreviewVisible(false);
-  setElementHidden(elements.resultLoading, true);
-  setElementHidden(elements.resultError, true);
-  setElementHidden(elements.resultContent, false);
-
-  if (elements.resultsTitle) {
-    elements.resultsTitle.textContent = '자막 추출 완료';
-  }
-
-  if (elements.resultsMeta) {
-    elements.resultsMeta.textContent = '자막 파일을 바로 다운로드했습니다.';
-  }
-
-  if (elements.resultsPreview) {
-    elements.resultsPreview.replaceChildren();
-  }
-
-  setResultCountBadge(`${result.itemCount}개 구간`);
-}
-
-function escapeFilenameSegment(value: string, fallback: string): string {
-  const sanitized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9가-힣]+/gi, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-
-  return sanitized || fallback;
-}
-
-function downloadFile(content: string, filename: string, mimeType: string): void {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-function handleDownload(format: 'txt' | 'json'): void {
-  if (!latestExtraction) {
-    return;
-  }
-
-  if (latestExtraction.kind === 'quiz') {
-    const title = latestExtraction.data.meta.title ?? currentPageInfo?.title ?? 'quiz';
-    const filename = `${escapeFilenameSegment(title, 'quiz')}.${format}`;
-    const content = format === 'json'
-      ? formatQuizOutput(latestExtraction.data, 'json')
-      : formatQuizOutput(latestExtraction.data, 'text');
-
-    downloadFile(
-      content,
-      filename,
-      format === 'json' ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8',
+  try {
+    const result = await options.action();
+    options.onSuccess(result);
+    setButtonFeedback(kind, '✓ 완료', 'success');
+    setActionStatus(options.successMessage, 'success');
+  } catch (error) {
+    console.error(`[KU LMS Helper] ${kind} extraction error:`, error);
+    setButtonFeedback(kind, '✗ 실패', 'error');
+    setActionStatus(
+      error instanceof Error ? error.message : options.errorMessage,
+      'error',
     );
-    return;
   }
 
-  const title = latestExtraction.data.pageTitle || currentPageInfo?.title || 'transcript';
-  const filename = `${escapeFilenameSegment(title, 'transcript')}.${format}`;
-  const content = format === 'json'
-    ? JSON.stringify(latestExtraction.data, null, 2)
-    : formatTranscriptOutput(latestExtraction.data);
-
-  downloadFile(
-    content,
-    filename,
-    format === 'json' ? 'application/json;charset=utf-8' : 'text/plain;charset=utf-8',
-  );
+  await delay(BUTTON_RESET_DELAY_MS);
+  resetActionFeedback();
 }
 
 async function initializePopup(): Promise<void> {
   console.log('[KU LMS Helper] Initializing popup...');
 
   showState('loading');
-  resetResultsPanel();
+  resetActionFeedback();
 
   try {
     const pageInfo = await queryPageInfo();
     console.log('[KU LMS Helper] Received page info:', pageInfo);
-
-    currentPageInfo = pageInfo;
     showState('ready');
   } catch (error) {
     console.error('[KU LMS Helper] Error:', error);
@@ -632,57 +375,43 @@ async function initializePopup(): Promise<void> {
 async function handleExtractQuiz(): Promise<void> {
   console.log('[KU LMS Helper] Extract quiz clicked');
 
-  try {
-    showResultLoading('퀴즈 문항과 정답을 분석하고 있습니다...', 'EXTRACT_QUIZ');
+  await runActionWithFeedback<QuizExtraction>('quiz', {
+    loadingMessage: '퀴즈를 추출하고 있습니다...',
+    successMessage: '완료',
+    errorMessage: '퀴즈 추출 중 오류가 발생했습니다.',
+    action: async () => {
+      const response = await sendMessageToActiveTab<QuizExtractionResultMessage>({ type: 'EXTRACT_QUIZ' });
+      if (response.type !== 'QUIZ_EXTRACTION_RESULT') {
+        throw new Error('퀴즈 추출 응답 형식이 올바르지 않습니다.');
+      }
 
-    const response = await sendMessageToActiveTab<QuizExtractionResultMessage>({ type: 'EXTRACT_QUIZ' });
-    if (response.type !== 'QUIZ_EXTRACTION_RESULT') {
-      throw new Error('퀴즈 추출 응답 형식이 올바르지 않습니다.');
-    }
-
-    latestExtraction = {
-      kind: 'quiz',
-      data: response.data,
-    };
-    showExtractedResult(latestExtraction);
-  } catch (error) {
-    console.error('[KU LMS Helper] Quiz extraction error:', error);
-    showResultError(error instanceof Error ? error.message : '퀴즈 추출 중 오류가 발생했습니다.');
-  }
+      return response.data;
+    },
+    onSuccess: (result) => {
+      downloadQuizAsFile(result, 'text');
+    },
+  });
 }
 
 async function handleExtractTranscript(): Promise<void> {
   console.log('[KU LMS Helper] Extract transcript clicked');
 
-  try {
-    showResultLoading('강의 자막을 수집하고 있습니다...', 'EXTRACT_TRANSCRIPT');
+  await runActionWithFeedback<TranscriptDocument>('transcript', {
+    loadingMessage: '자막을 추출하고 있습니다...',
+    successMessage: '완료',
+    errorMessage: '자막 추출 중 오류가 발생했습니다.',
+    action: async () => {
+      const response = await sendMessageToActiveTab<TranscriptExtractionResultMessage>({ type: 'EXTRACT_TRANSCRIPT' });
+      if (response.type !== 'TRANSCRIPT_EXTRACTION_RESULT') {
+        throw new Error('자막 추출 응답 형식이 올바르지 않습니다.');
+      }
 
-    const response = await sendMessageToActiveTab<TranscriptExtractionResultMessage>({ type: 'EXTRACT_TRANSCRIPT' });
-    if (response.type !== 'TRANSCRIPT_EXTRACTION_RESULT') {
-      throw new Error('자막 추출 응답 형식이 올바르지 않습니다.');
-    }
-
-    latestExtraction = {
-      kind: 'transcript',
-      data: response.data,
-    };
-    downloadTranscriptAsFile(response.data, 'text');
-    showTranscriptDownloadSuccess(response.data);
-  } catch (error) {
-    console.error('[KU LMS Helper] Transcript extraction error:', error);
-    showResultError(error instanceof Error ? error.message : '자막 추출 중 오류가 발생했습니다.');
-  }
-}
-
-function handleRetryExtraction(): void {
-  if (lastExtractionRequest === 'EXTRACT_QUIZ') {
-    void handleExtractQuiz();
-    return;
-  }
-
-  if (lastExtractionRequest === 'EXTRACT_TRANSCRIPT') {
-    void handleExtractTranscript();
-  }
+      return response.data;
+    },
+    onSuccess: (result) => {
+      downloadTranscriptAsFile(result, 'text');
+    },
+  });
 }
 
 function setupEventListeners(): void {
@@ -695,13 +424,6 @@ function setupEventListeners(): void {
   });
   elements.retryBtn?.addEventListener('click', () => {
     void initializePopup();
-  });
-  elements.resultRetryBtn?.addEventListener('click', handleRetryExtraction);
-  elements.downloadTxtBtn?.addEventListener('click', () => {
-    handleDownload('txt');
-  });
-  elements.downloadJsonBtn?.addEventListener('click', () => {
-    handleDownload('json');
   });
 }
 
