@@ -6,6 +6,21 @@ const PLAYER_FRAME_URL_FRAGMENT = 'kucom.korea.ac.kr/em/';
 const TRANSCRIPT_ROW_SELECTOR = '#cs-script-list > li.cs-script-item';
 const RETRY_ATTEMPTS = 40;
 const RETRY_DELAY_MS = 250;
+const TRANSCRIPT_PANEL_DELAY_MS = 1000;
+const TRANSCRIPT_TOGGLE_SELECTORS = [
+  'button[aria-label*="자막"]',
+  'button[title*="자막"]',
+  'button[aria-label*="스크립트"]',
+  'button[title*="스크립트"]',
+  'button[aria-label*="transcript" i]',
+  'button[title*="transcript" i]',
+  'button[aria-label*="caption" i]',
+  'button[title*="caption" i]',
+  '[data-role*="transcript" i]',
+  '[class*="transcript" i]',
+  '[class*="script" i]',
+] as const;
+const TRANSCRIPT_TOGGLE_TEXT_PATTERN = /자막|스크립트|transcript|caption/iu;
 
 interface PlayerStory {
   isIntro?: boolean;
@@ -74,6 +89,91 @@ function findPlayerIframe(): HTMLIFrameElement | null {
       return src.includes(PLAYER_FRAME_URL_FRAGMENT) || src.includes('kucom.korea.ac.kr');
     }) ?? null
   );
+}
+
+function isElementVisible(element: Element | null): element is HTMLElement {
+  if (!(element instanceof HTMLElement)) {
+    return false;
+  }
+
+  const style = window.getComputedStyle(element);
+  return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+}
+
+function getSearchDocuments(): Document[] {
+  const documents: Document[] = [document];
+  const iframe = findPlayerIframe();
+  const frameDocument = iframe ? getAccessibleFrameWindow(iframe)?.document : null;
+
+  if (frameDocument) {
+    documents.unshift(frameDocument);
+  }
+
+  return documents;
+}
+
+function hasVisibleTranscriptRows(sourceDocument: Document): boolean {
+  return Array.from(sourceDocument.querySelectorAll(TRANSCRIPT_ROW_SELECTOR)).some((row) => isElementVisible(row));
+}
+
+function isTranscriptPanelOpen(): boolean {
+  return getSearchDocuments().some((sourceDocument) => hasVisibleTranscriptRows(sourceDocument));
+}
+
+function findTranscriptToggleButton(sourceDocument: Document): HTMLElement | null {
+  for (const selector of TRANSCRIPT_TOGGLE_SELECTORS) {
+    const candidate = sourceDocument.querySelector(selector);
+    if (isElementVisible(candidate)) {
+      return candidate;
+    }
+  }
+
+  const interactiveElements = Array.from(
+    sourceDocument.querySelectorAll('button, [role="button"], a, summary'),
+  );
+
+  for (const element of interactiveElements) {
+    if (!isElementVisible(element)) {
+      continue;
+    }
+
+    const htmlElement = element as HTMLElement;
+    const label = [
+      htmlElement.textContent,
+      htmlElement.getAttribute('aria-label'),
+      htmlElement.getAttribute('title'),
+      htmlElement.getAttribute('data-tooltip'),
+      htmlElement.getAttribute('data-original-title'),
+    ].filter(Boolean).join(' ');
+
+    if (TRANSCRIPT_TOGGLE_TEXT_PATTERN.test(label)) {
+      return htmlElement;
+    }
+  }
+
+  return null;
+}
+
+async function autoOpenTranscriptPanel(): Promise<boolean> {
+  if (isTranscriptPanelOpen()) {
+    return false;
+  }
+
+  for (const sourceDocument of getSearchDocuments()) {
+    const toggleButton = findTranscriptToggleButton(sourceDocument);
+    if (!toggleButton) {
+      continue;
+    }
+
+    toggleButton.click();
+    await delay(TRANSCRIPT_PANEL_DELAY_MS);
+
+    if (isTranscriptPanelOpen()) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function readDomTranscriptItems(sourceDocument: Document): TranscriptItem[] {
@@ -261,16 +361,28 @@ export async function extractFromVideoPlayer(): Promise<CaptionPayload | null> {
 }
 
 export async function extractTranscriptFromPage(): Promise<TranscriptDocument> {
+  let transcriptPanelOpened = false;
+
   for (let attempt = 0; attempt < RETRY_ATTEMPTS; attempt += 1) {
+    const captionPayload = await extractFromVideoPlayerOnce();
+    const vttItems = captionPayload ? parseVttContent(captionPayload.vttText) : [];
+    if (vttItems.length > 0) {
+      return createTranscriptDocument(vttItems);
+    }
+
     const domItems = extractDomTranscript();
     if (domItems && domItems.length > 0) {
       return createTranscriptDocument(domItems);
     }
 
-    const captionPayload = await extractFromVideoPlayerOnce();
-    const vttItems = captionPayload ? parseVttContent(captionPayload.vttText) : [];
-    if (vttItems.length > 0) {
-      return createTranscriptDocument(vttItems);
+    if (!transcriptPanelOpened) {
+      transcriptPanelOpened = await autoOpenTranscriptPanel();
+      if (transcriptPanelOpened) {
+        const openedPanelItems = extractDomTranscript();
+        if (openedPanelItems && openedPanelItems.length > 0) {
+          return createTranscriptDocument(openedPanelItems);
+        }
+      }
     }
 
     await delay(RETRY_DELAY_MS);

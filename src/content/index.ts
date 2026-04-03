@@ -103,7 +103,7 @@ function handleMessage(
 
         if (extraction.itemCount === 0) {
           sendResponse({
-            error: '자막을 찾지 못했습니다. 자막 패널을 연 뒤 다시 시도해주세요.',
+            error: '자막을 찾지 못했습니다. 강의 플레이어가 완전히 로드된 뒤 다시 시도해주세요.',
           });
           return;
         }

@@ -4,7 +4,7 @@
 import '../styles/global.css';
 import './popup.css';
 import { formatQuizOutput, type QuizExtraction } from '../lib/quiz';
-import { formatTranscriptOutput, type TranscriptDocument } from '../lib/transcript';
+import { downloadTranscriptAsFile, formatTranscriptOutput, type TranscriptDocument } from '../lib/transcript';
 import {
   type ExtensionMessage,
   type ExtensionResponse,
@@ -36,6 +36,7 @@ const elements = {
   resultContent: document.getElementById('result-content'),
   resultsMeta: document.getElementById('results-meta'),
   resultsPreview: document.getElementById('results-preview'),
+  downloadActions: document.querySelector('.download-actions'),
   downloadTxtBtn: document.getElementById('download-txt-btn'),
   downloadJsonBtn: document.getElementById('download-json-btn'),
   themeToggleBtn: document.getElementById('theme-toggle-btn'),
@@ -69,7 +70,6 @@ const THEME_ICONS = {
 } as const;
 
 const QUIZ_PREVIEW_COUNT = 3;
-const TRANSCRIPT_PREVIEW_COUNT = 5;
 const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 let currentPageInfo: PageInfoMessage | null = null;
@@ -214,6 +214,14 @@ function setDownloadButtonsEnabled(enabled: boolean): void {
   }
 }
 
+function setDownloadActionsVisible(visible: boolean): void {
+  setElementHidden(elements.downloadActions as HTMLElement | null, !visible);
+}
+
+function setResultsPreviewVisible(visible: boolean): void {
+  setElementHidden(elements.resultsPreview, !visible);
+}
+
 function setResultCountBadge(text: string | null): void {
   if (!elements.resultCountBadge) {
     return;
@@ -274,6 +282,8 @@ function resetResultsPanel(): void {
   setResultCountBadge(null);
   setActionButtonsDisabled(false);
   setDownloadButtonsEnabled(false);
+  setDownloadActionsVisible(true);
+  setResultsPreviewVisible(false);
 
   if (elements.resultsTitle) {
     elements.resultsTitle.textContent = '미리보기';
@@ -365,6 +375,8 @@ function showResultLoading(message: string, requestType: ExtractionRequestType):
   latestExtraction = null;
   setActionButtonsDisabled(true);
   setDownloadButtonsEnabled(false);
+  setDownloadActionsVisible(requestType === 'EXTRACT_QUIZ');
+  setResultsPreviewVisible(false);
   setElementHidden(elements.resultError, true);
   setElementHidden(elements.resultContent, true);
   setElementHidden(elements.resultLoading, false);
@@ -442,6 +454,8 @@ function renderQuizPreview(result: QuizExtraction): void {
     return;
   }
 
+  setDownloadActionsVisible(true);
+  setResultsPreviewVisible(true);
   elements.resultsTitle.textContent = result.meta.title || '퀴즈 추출 미리보기';
   elements.resultsMeta.textContent = [
     `총 ${result.questions.length}문항`,
@@ -497,23 +511,6 @@ function renderQuizPreview(result: QuizExtraction): void {
   });
 }
 
-function renderTranscriptPreview(result: TranscriptDocument): void {
-  if (!elements.resultsPreview || !elements.resultsMeta || !elements.resultsTitle) {
-    return;
-  }
-
-  elements.resultsTitle.textContent = result.pageTitle || '자막 추출 미리보기';
-  elements.resultsMeta.textContent = `총 ${result.itemCount}개 구간 · 앞부분 ${Math.min(result.itemCount, TRANSCRIPT_PREVIEW_COUNT)}개 미리보기`;
-  setResultCountBadge(`${result.itemCount}개 구간`);
-  elements.resultsPreview.replaceChildren();
-
-  result.items.slice(0, TRANSCRIPT_PREVIEW_COUNT).forEach((item) => {
-    const card = createPreviewCard(item.time, `#${item.index + 1}`);
-    card.appendChild(createPreviewText(item.text));
-    elements.resultsPreview?.appendChild(card);
-  });
-}
-
 function showExtractedResult(result: ExtractedResult): void {
   if (!result) {
     return;
@@ -530,8 +527,31 @@ function showExtractedResult(result: ExtractedResult): void {
     renderQuizPreview(result.data);
     return;
   }
+}
 
-  renderTranscriptPreview(result.data);
+function showTranscriptDownloadSuccess(result: TranscriptDocument): void {
+  showResultsPanel();
+  setActionButtonsDisabled(false);
+  setDownloadButtonsEnabled(false);
+  setDownloadActionsVisible(false);
+  setResultsPreviewVisible(false);
+  setElementHidden(elements.resultLoading, true);
+  setElementHidden(elements.resultError, true);
+  setElementHidden(elements.resultContent, false);
+
+  if (elements.resultsTitle) {
+    elements.resultsTitle.textContent = '자막 추출 완료';
+  }
+
+  if (elements.resultsMeta) {
+    elements.resultsMeta.textContent = '자막 파일을 바로 다운로드했습니다.';
+  }
+
+  if (elements.resultsPreview) {
+    elements.resultsPreview.replaceChildren();
+  }
+
+  setResultCountBadge(`${result.itemCount}개 구간`);
 }
 
 function escapeFilenameSegment(value: string, fallback: string): string {
@@ -646,7 +666,8 @@ async function handleExtractTranscript(): Promise<void> {
       kind: 'transcript',
       data: response.data,
     };
-    showExtractedResult(latestExtraction);
+    downloadTranscriptAsFile(response.data, 'text');
+    showTranscriptDownloadSuccess(response.data);
   } catch (error) {
     console.error('[KU LMS Helper] Transcript extraction error:', error);
     showResultError(error instanceof Error ? error.message : '자막 추출 중 오류가 발생했습니다.');

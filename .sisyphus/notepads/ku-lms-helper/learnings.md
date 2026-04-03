@@ -13,3 +13,5 @@
 - Reusing the popup token scale (`--space-3`, `--space-4`, semantic color vars) makes side-by-side dual extraction actions fit cleanly without introducing new visual magic numbers.
 - Increasing `--size-popup-width` in `global.css` is enough to widen the popup across the built extension because the popup shell consumes that token directly.
 - Biome's `noImportantStyles` warning in the reduced-motion block can be cleared by relying on source order instead of `!important` without affecting the generated build output.
+- Transcript extraction is more reliable when it tries the player iframe's VTT/config path first, then auto-clicks a transcript toggle in the page or iframe before falling back to DOM rows.
+- For transcript UX, auto-downloading TXT and replacing the preview with a compact success state avoids an unnecessary second click without affecting quiz preview/download flows.
