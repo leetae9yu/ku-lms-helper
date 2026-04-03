@@ -19,13 +19,8 @@ console.log('[KU LMS Helper] Popup script loaded');
 const elements = {
   appRoot: document.getElementById('app'),
   loadingState: document.getElementById('loading-state'),
-  quizState: document.getElementById('quiz-state'),
-  transcriptState: document.getElementById('transcript-state'),
-  unknownState: document.getElementById('unknown-state'),
+  readyState: document.getElementById('ready-state'),
   errorState: document.getElementById('error-state'),
-  pageInfo: document.getElementById('page-info'),
-  pageTypeBadge: document.getElementById('page-type-badge'),
-  pageUrl: document.getElementById('page-url'),
   errorMessage: document.getElementById('error-message'),
   extractQuizBtn: document.getElementById('extract-quiz-btn'),
   extractTranscriptBtn: document.getElementById('extract-transcript-btn'),
@@ -47,7 +42,7 @@ const elements = {
   themeToggleIcon: document.getElementById('theme-toggle-icon'),
 } as const;
 
-type PopupState = 'loading' | 'quiz' | 'transcript' | 'unknown' | 'error';
+type PopupState = 'loading' | 'ready' | 'error';
 type ExtractionRequestType = 'EXTRACT_QUIZ' | 'EXTRACT_TRANSCRIPT';
 type ExtractedResult =
   | { kind: 'quiz'; data: QuizExtraction }
@@ -56,8 +51,8 @@ type ExtractedResult =
 type ThemePreference = 'system' | 'light' | 'dark';
 
 const BUTTON_LABELS = {
-  quiz: '퀴즈 추출하기',
-  transcript: '자막 추출하기',
+  quiz: '📝 퀴즈 추출하기',
+  transcript: '🎥 자막 추출하기',
 } as const;
 
 const THEME_STORAGE_KEY = 'ku-lms-helper-theme-preference';
@@ -77,7 +72,6 @@ const QUIZ_PREVIEW_COUNT = 3;
 const TRANSCRIPT_PREVIEW_COUNT = 5;
 const themeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-let currentPopupState: PopupState = 'loading';
 let currentPageInfo: PageInfoMessage | null = null;
 let lastExtractionRequest: ExtractionRequestType | null = null;
 let latestExtraction: ExtractedResult = null;
@@ -178,14 +172,9 @@ function initializeTheme(): void {
 }
 
 function showState(state: PopupState): void {
-  currentPopupState = state;
-
   setElementHidden(elements.loadingState, true);
-  setElementHidden(elements.quizState, true);
-  setElementHidden(elements.transcriptState, true);
-  setElementHidden(elements.unknownState, true);
+  setElementHidden(elements.readyState, true);
   setElementHidden(elements.errorState, true);
-  setElementHidden(elements.pageInfo, true);
 
   if (elements.appRoot) {
     elements.appRoot.setAttribute('data-page-state', state);
@@ -195,16 +184,8 @@ function showState(state: PopupState): void {
     case 'loading':
       setElementHidden(elements.loadingState, false);
       break;
-    case 'quiz':
-      setElementHidden(elements.quizState, false);
-      setElementHidden(elements.pageInfo, false);
-      break;
-    case 'transcript':
-      setElementHidden(elements.transcriptState, false);
-      setElementHidden(elements.pageInfo, false);
-      break;
-    case 'unknown':
-      setElementHidden(elements.unknownState, false);
+    case 'ready':
+      setElementHidden(elements.readyState, false);
       break;
     case 'error':
       setElementHidden(elements.errorState, false);
@@ -251,8 +232,8 @@ function setResultCountBadge(text: string | null): void {
 function setActionButtonsDisabled(disabled: boolean): void {
   const quizButton = elements.extractQuizBtn as HTMLButtonElement | null;
   const transcriptButton = elements.extractTranscriptBtn as HTMLButtonElement | null;
-  const quizLoading = disabled && currentPopupState === 'quiz';
-  const transcriptLoading = disabled && currentPopupState === 'transcript';
+  const quizLoading = disabled && lastExtractionRequest === 'EXTRACT_QUIZ';
+  const transcriptLoading = disabled && lastExtractionRequest === 'EXTRACT_TRANSCRIPT';
 
   if (elements.appRoot) {
     elements.appRoot.setAttribute('data-busy', String(disabled));
@@ -308,25 +289,6 @@ function resetResultsPanel(): void {
 
   if (elements.resultsPreview) {
     elements.resultsPreview.replaceChildren();
-  }
-}
-
-function updatePageInfo(info: PageInfoMessage): void {
-  if (elements.pageTypeBadge) {
-    const badgeText = {
-      quiz: '📝 퀴즈',
-      transcript: '🎥 강의',
-      unknown: '❓ 알 수 없음',
-    } as const;
-
-    elements.pageTypeBadge.textContent = badgeText[info.pageType];
-    elements.pageTypeBadge.className = `page-type-badge badge-${info.pageType}`;
-  }
-
-  if (elements.pageUrl) {
-    const url = new URL(info.url);
-    elements.pageUrl.textContent = `${url.pathname}${url.search}`;
-    elements.pageUrl.title = info.url;
   }
 }
 
@@ -640,20 +602,7 @@ async function initializePopup(): Promise<void> {
     console.log('[KU LMS Helper] Received page info:', pageInfo);
 
     currentPageInfo = pageInfo;
-    updatePageInfo(pageInfo);
-
-    switch (pageInfo.pageType) {
-      case 'quiz':
-        showState('quiz');
-        break;
-      case 'transcript':
-        showState('transcript');
-        break;
-      case 'unknown':
-      default:
-        showState('unknown');
-        break;
-    }
+    showState('ready');
   } catch (error) {
     console.error('[KU LMS Helper] Error:', error);
     showError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');

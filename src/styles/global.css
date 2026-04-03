@@ -25,7 +25,7 @@
 
   --size-control: 44px;
   --size-icon-button: 36px;
-  --size-popup-width: 360px;
+  --size-popup-width: 400px;
   --size-popup-min-height: 240px;
   --size-popup-max-height: 600px;
   --size-preview-max: 232px;
@@ -180,9 +180,9 @@ a:focus-visible,
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+    transition-duration: 0.01ms;
+    scroll-behavior: auto;
   }
 }

@@ -9,3 +9,7 @@
 - Popup theming works best when `global.css` owns semantic tokens and `popup.css` only aliases those tokens into component-level variables, making light/dark overrides automatic.
 - A three-state popup theme preference (`system -> dark -> light`) stored in `localStorage` keeps `prefers-color-scheme` support while still allowing manual overrides in the header.
 - Disabled extract buttons can still feel responsive by pairing text swaps with lightweight `data-loading` spinner affordances instead of adding heavier JS-driven progress components.
+- For the LMS popup, treating any successful `PAGE_INFO` response as a single `ready` state keeps the UI predictable while leaving extraction failures to the per-action result error panel.
+- Reusing the popup token scale (`--space-3`, `--space-4`, semantic color vars) makes side-by-side dual extraction actions fit cleanly without introducing new visual magic numbers.
+- Increasing `--size-popup-width` in `global.css` is enough to widen the popup across the built extension because the popup shell consumes that token directly.
+- Biome's `noImportantStyles` warning in the reduced-motion block can be cleared by relying on source order instead of `!important` without affecting the generated build output.
