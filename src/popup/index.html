@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KU LMS Helper</title>
+  </head>
+  <body>
+    <div id="app" data-page-state="loading" data-busy="false">
+      <header class="popup-header">
+        <div class="brand-block">
+          <p class="brand-kicker">고려대 LMS 도우미</p>
+          <h1>KU LMS Helper</h1>
+        </div>
+
+        <div class="header-actions">
+          <span class="version">v0.1.0</span>
+          <div class="tooltip-anchor">
+            <button
+              id="theme-toggle-btn"
+              class="icon-button theme-toggle"
+              type="button"
+              aria-label="테마 전환"
+              aria-describedby="theme-toggle-tooltip"
+            >
+              <span id="theme-toggle-icon" class="theme-toggle-icon" aria-hidden="true">◐</span>
+            </button>
+            <span id="theme-toggle-tooltip" class="tooltip" role="tooltip">
+              시스템 테마를 따르거나 직접 전환할 수 있습니다.
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main class="popup-body">
+        <div id="loading-state" class="state-container" role="status" aria-live="polite">
+          <div class="state-icon state-icon-loading" aria-hidden="true">
+            <div class="loading-spinner"></div>
+          </div>
+          <h2>페이지 분석 중</h2>
+          <p class="state-message">현재 탭의 콘텐츠를 확인하고 준비하고 있습니다.</p>
+          <div class="loading-progress" aria-hidden="true">
+            <span class="loading-progress-bar"></span>
+          </div>
+        </div>
+
+        <div id="quiz-state" class="state-container hidden" hidden>
+          <div class="state-icon" aria-hidden="true">📝</div>
+          <h2>퀴즈 페이지 감지됨</h2>
+          <p class="state-description">이 페이지에서 퀴즈를 추출할 수 있습니다.</p>
+          <button id="extract-quiz-btn" class="action-button primary" type="button">
+            퀴즈 추출하기
+          </button>
+        </div>
+
+        <div id="transcript-state" class="state-container hidden" hidden>
+          <div class="state-icon" aria-hidden="true">🎥</div>
+          <h2>강의 영상 감지됨</h2>
+          <p class="state-description">이 페이지에서 자막을 추출할 수 있습니다.</p>
+          <button id="extract-transcript-btn" class="action-button primary" type="button">
+            자막 추출하기
+          </button>
+        </div>
+
+        <section id="results-panel" class="results-panel hidden" aria-live="polite" hidden>
+          <div class="results-header">
+            <div>
+              <p class="results-eyebrow">추출 결과</p>
+              <h3 id="results-title" class="results-title">미리보기</h3>
+            </div>
+            <span id="result-count-badge" class="result-count-badge hidden" hidden></span>
+          </div>
+
+          <div id="result-loading" class="result-feedback hidden" role="status" aria-live="polite" hidden>
+            <div class="loading-spinner compact" aria-hidden="true"></div>
+            <p id="result-loading-message" class="state-description result-feedback-text">
+              추출 중입니다...
+            </p>
+            <div class="loading-progress compact" aria-hidden="true">
+              <span class="loading-progress-bar"></span>
+            </div>
+          </div>
+
+          <div id="result-error" class="result-feedback hidden" aria-live="assertive" hidden>
+            <p id="result-error-message" class="state-description error-text result-feedback-text">
+              추출 중 오류가 발생했습니다.
+            </p>
+            <button id="result-retry-btn" class="action-button secondary" type="button">
+              다시 시도
+            </button>
+          </div>
+
+          <div id="result-content" class="result-content hidden" hidden>
+            <p id="results-meta" class="results-meta"></p>
+            <div id="results-preview" class="results-preview"></div>
+            <div class="download-actions" role="group" aria-label="다운로드 형식 선택">
+              <div class="tooltip-anchor">
+                <button
+                  id="download-txt-btn"
+                  class="action-button secondary"
+                  type="button"
+                  aria-describedby="download-txt-tooltip"
+                  disabled
+                >
+                  TXT 다운로드
+                </button>
+                <span id="download-txt-tooltip" class="tooltip" role="tooltip">
+                  바로 읽거나 공유하기 쉬운 텍스트 형식입니다.
+                </span>
+              </div>
+              <div class="tooltip-anchor">
+                <button
+                  id="download-json-btn"
+                  class="action-button secondary"
+                  type="button"
+                  aria-describedby="download-json-tooltip"
+                  disabled
+                >
+                  JSON 다운로드
+                </button>
+                <span id="download-json-tooltip" class="tooltip" role="tooltip">
+                  후처리나 자동화에 적합한 구조화 데이터입니다.
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div id="unknown-state" class="state-container hidden" hidden>
+          <div class="state-icon" aria-hidden="true">❓</div>
+          <h2>지원되지 않는 페이지</h2>
+          <p class="state-description">
+            이 페이지에서는 기능을 사용할 수 없습니다.<br />
+            고려대학교 LMS 퀴즈 또는 강의 페이지에서 사용하세요.
+          </p>
+          <div class="info-box">
+            <p><strong>지원하는 페이지</strong></p>
+            <ul>
+              <li>📝 퀴즈 페이지</li>
+              <li>🎥 강의 영상 페이지</li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="error-state" class="state-container hidden" hidden>
+          <div class="state-icon" aria-hidden="true">⚠️</div>
+          <h2>오류 발생</h2>
+          <p id="error-message" class="state-description error-text">
+            페이지 정보를 가져올 수 없습니다.
+          </p>
+          <button id="retry-btn" class="action-button secondary" type="button">
+            다시 시도
+          </button>
+        </div>
+      </main>
+
+      <footer class="popup-footer">
+        <div id="page-info" class="page-info hidden" hidden>
+          <span class="page-type-badge" id="page-type-badge"></span>
+          <span class="page-url" id="page-url"></span>
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

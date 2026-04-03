@@ -1,0 +1,11 @@
+## 2026-04-03
+- @crxjs/vite-plugin works cleanly with a Manifest V3 scaffold and Vite builds output to `dist/`.
+- A minimal popup HTML + plain TS entry is enough to verify HMR/build without adding a framework.
+- Transcript extraction can mirror the CLI flow in-browser: prefer rendered `.cs-script-item` rows, otherwise resolve caption XML/VTT from `window.uniPlayerConfig` and choose Korean captions first.
+- Popup-driven extraction must be delegated to the content script via `chrome.tabs.sendMessage(...)`; the popup cannot safely run DOM extraction against the LMS page document.
+- The popup had no real design system, so introducing local CSS variables for color, spacing, radius, and typography made the new preview/download/error states consistent without spreading magic numbers.
+- Shared download helpers should build `Blob` URLs, sanitize filenames aggressively, and revoke object URLs after click to keep browser downloads reliable.
+- Formatting stays easiest to maintain when quiz/transcript text and JSON serializers live in dedicated formatter modules and the extractor just delegates.
+- Popup theming works best when `global.css` owns semantic tokens and `popup.css` only aliases those tokens into component-level variables, making light/dark overrides automatic.
+- A three-state popup theme preference (`system -> dark -> light`) stored in `localStorage` keeps `prefers-color-scheme` support while still allowing manual overrides in the header.
+- Disabled extract buttons can still feel responsive by pairing text swaps with lightweight `data-loading` spinner affordances instead of adding heavier JS-driven progress components.

@@ -1,0 +1,188 @@
+:root {
+  --font-family-body: 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --font-family-display: 'Iowan Old Style', 'Palatino Linotype', 'Noto Serif KR', 'Apple Myungjo', serif;
+
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  --size-control: 44px;
+  --size-icon-button: 36px;
+  --size-popup-width: 360px;
+  --size-popup-min-height: 240px;
+  --size-popup-max-height: 600px;
+  --size-preview-max: 232px;
+  --size-progress-max: 180px;
+  --size-tooltip-max: 220px;
+  --size-state-icon-glyph: 30px;
+  --size-spinner-stroke: 3px;
+  --size-spinner-stroke-compact: 2px;
+
+  --motion-fast: 150ms;
+  --motion-normal: 200ms;
+  --motion-slow: 280ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --shadow-panel: 0 24px 56px color-mix(in srgb, var(--color-primary) 16%, transparent);
+  --shadow-card: 0 14px 30px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  --shadow-interactive: 0 12px 24px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --shadow-interactive-strong: 0 16px 30px color-mix(in srgb, var(--color-primary) 28%, transparent);
+
+  --color-primary: #8b0029;
+  --color-primary-strong: #69001f;
+  --color-primary-soft: #f8e9ee;
+  --color-accent: #d89a65;
+  --color-text-inverse: #ffffff;
+  --color-success: #0f6b46;
+  --color-success-soft: #e0f3ea;
+  --color-info: #294e9b;
+  --color-info-soft: #e7efff;
+  --color-danger: #b42318;
+  --color-danger-soft: #fdecea;
+  --color-focus: #d89a65;
+
+  --color-bg: #ffffff;
+  --color-surface: #fffdfb;
+  --color-surface-elevated: #ffffff;
+  --color-surface-muted: #f6f1ef;
+  --color-border: #e6d7d2;
+  --color-border-strong: #d4bbb2;
+  --color-text: #1a1a1a;
+  --color-text-secondary: #666666;
+  --color-text-tertiary: #7e6f69;
+  --color-track: #eaded8;
+
+  color-scheme: light;
+  font-family: var(--font-family-body);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #1a1a1a;
+  --color-surface: #201d1d;
+  --color-surface-elevated: #272222;
+  --color-surface-muted: #2c2626;
+  --color-border: #493838;
+  --color-border-strong: #6a5050;
+  --color-text: #ffffff;
+  --color-text-secondary: #999999;
+  --color-text-tertiary: #bda9a9;
+  --color-track: #3c3131;
+  --color-primary-soft: #3b1622;
+  --color-accent: #efba88;
+  --color-success-soft: #153429;
+  --color-info-soft: #1a2747;
+  --color-danger-soft: #451d1d;
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) {
+    --color-bg: #1a1a1a;
+    --color-surface: #201d1d;
+    --color-surface-elevated: #272222;
+    --color-surface-muted: #2c2626;
+    --color-border: #493838;
+    --color-border-strong: #6a5050;
+    --color-text: #ffffff;
+    --color-text-secondary: #999999;
+    --color-text-tertiary: #bda9a9;
+    --color-track: #3c3131;
+    --color-primary-soft: #3b1622;
+    --color-accent: #efba88;
+    --color-success-soft: #153429;
+    --color-info-soft: #1a2747;
+    --color-danger-soft: #451d1d;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary-soft) 80%, transparent), transparent 52%),
+    radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-accent) 14%, transparent), transparent 40%),
+    var(--color-bg);
+  font-family: var(--font-family-body);
+  transition:
+    background-color var(--motion-normal) var(--ease-standard),
+    color var(--motion-normal) var(--ease-standard);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 18%, transparent);
+}
+
+.app-shell {
+  padding: var(--space-4);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
