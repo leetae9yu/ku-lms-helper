@@ -4,14 +4,12 @@
 import '../styles/global.css';
 import './popup.css';
 import { downloadQuizAsFile, type QuizExtraction } from '../lib/quiz';
-import { downloadTranscriptAsFile, type TranscriptDocument } from '../lib/transcript';
 import {
   type ExtensionMessage,
   type ExtensionResponse,
   type PageInfoMessage,
   type PageInfoRequest,
   type QuizExtractionResultMessage,
-  type TranscriptExtractionResultMessage,
 } from '../lib/page-types';
 
 console.log('[KU LMS Helper] Popup script loaded');
@@ -23,22 +21,14 @@ const elements = {
   errorState: document.getElementById('error-state'),
   errorMessage: document.getElementById('error-message'),
   extractQuizBtn: document.getElementById('extract-quiz-btn'),
-  extractTranscriptBtn: document.getElementById('extract-transcript-btn'),
   actionStatus: document.getElementById('action-status'),
   retryBtn: document.getElementById('retry-btn'),
   themeToggleBtn: document.getElementById('theme-toggle-btn'),
-  themeToggleIcon: document.getElementById('theme-toggle-icon'),
 } as const;
 
 type PopupState = 'loading' | 'ready' | 'error';
 type ThemePreference = 'system' | 'light' | 'dark';
-type ActionKind = 'quiz' | 'transcript';
 type ActionStatusTone = 'loading' | 'success' | 'error';
-
-const BUTTON_LABELS = {
-  quiz: '📝 퀴즈 추출하기',
-  transcript: '🎥 자막 추출하기',
-} as const;
 
 const THEME_STORAGE_KEY = 'ku-lms-helper-theme-preference';
 const THEME_SEQUENCE: ThemePreference[] = ['system', 'dark', 'light'];
@@ -46,11 +36,6 @@ const THEME_LABELS = {
   system: '시스템',
   dark: '다크',
   light: '라이트',
-} as const;
-const THEME_ICONS = {
-  system: '◐',
-  dark: '☾',
-  light: '☀',
 } as const;
 
 const BUTTON_RESET_DELAY_MS = 2000;
@@ -101,7 +86,7 @@ function getEffectiveTheme(preference: ThemePreference = currentThemePreference)
 function updateThemeToggle(): void {
   const themeButton = elements.themeToggleBtn as HTMLButtonElement | null;
 
-  if (!themeButton || !elements.themeToggleIcon) {
+  if (!themeButton) {
     return;
   }
 
@@ -111,7 +96,7 @@ function updateThemeToggle(): void {
   const nextLabel = THEME_LABELS[nextPreference];
   const effectiveTheme = getEffectiveTheme();
 
-  elements.themeToggleIcon.textContent = THEME_ICONS[currentThemePreference];
+  themeButton.textContent = '테마';
   themeButton.dataset.mode = currentThemePreference;
   themeButton.dataset.effectiveTheme = effectiveTheme;
   themeButton.setAttribute('aria-label', `테마 전환: 현재 ${currentLabel}, 다음 ${nextLabel}`);
@@ -202,11 +187,8 @@ function setActionStatus(message: string | null, tone?: ActionStatusTone): void 
   setElementHidden(elements.actionStatus, false);
 }
 
-function setActionButtonsDisabled(disabled: boolean, loadingKind: ActionKind | null = null): void {
+function setActionButtonsDisabled(disabled: boolean): void {
   const quizButton = elements.extractQuizBtn as HTMLButtonElement | null;
-  const transcriptButton = elements.extractTranscriptBtn as HTMLButtonElement | null;
-  const quizLoading = loadingKind === 'quiz';
-  const transcriptLoading = loadingKind === 'transcript';
 
   if (elements.appRoot) {
     elements.appRoot.setAttribute('data-busy', String(disabled));
@@ -214,26 +196,9 @@ function setActionButtonsDisabled(disabled: boolean, loadingKind: ActionKind | n
 
   if (quizButton) {
     quizButton.disabled = disabled;
-    quizButton.textContent = quizLoading ? '추출 중...' : BUTTON_LABELS.quiz;
-    if (quizLoading) {
-      quizButton.setAttribute('data-loading', 'true');
-    } else {
-      quizButton.removeAttribute('data-loading');
-    }
+    quizButton.removeAttribute('data-loading');
     quizButton.removeAttribute('data-status');
-    quizButton.setAttribute('aria-busy', String(quizLoading));
-  }
-
-  if (transcriptButton) {
-    transcriptButton.disabled = disabled;
-    transcriptButton.textContent = transcriptLoading ? '추출 중...' : BUTTON_LABELS.transcript;
-    if (transcriptLoading) {
-      transcriptButton.setAttribute('data-loading', 'true');
-    } else {
-      transcriptButton.removeAttribute('data-loading');
-    }
-    transcriptButton.removeAttribute('data-status');
-    transcriptButton.setAttribute('aria-busy', String(transcriptLoading));
+    quizButton.setAttribute('aria-busy', String(disabled));
   }
 }
 
@@ -311,74 +276,36 @@ async function queryPageInfo(): Promise<PageInfoMessage> {
   return response;
 }
 
-function setButtonFeedback(kind: ActionKind, label: string, status: 'success' | 'error'): void {
-  const button = kind === 'quiz' ? elements.extractQuizBtn : elements.extractTranscriptBtn;
-  const targetButton = button as HTMLButtonElement | null;
-
-  if (!targetButton) {
-    return;
-  }
-
-  targetButton.textContent = label;
-  targetButton.setAttribute('data-status', status);
-  targetButton.removeAttribute('data-loading');
-  targetButton.setAttribute('aria-busy', 'false');
-}
-
-async function runActionWithFeedback<T>(
-  kind: ActionKind,
-  options: {
-    loadingMessage: string;
-    successMessage: string;
-    onSuccess: (result: T) => void;
-    action: () => Promise<T>;
-    errorMessage: string;
-  },
-): Promise<void> {
-  setActionButtonsDisabled(true, kind);
+async function runActionWithFeedback<T>(options: {
+  loadingMessage: string;
+  successMessage: string;
+  onSuccess: (result: T) => void;
+  action: () => Promise<T>;
+  errorMessage: string;
+}): Promise<void> {
+  setActionButtonsDisabled(true);
   setActionStatus(options.loadingMessage, 'loading');
 
   try {
     const result = await options.action();
     options.onSuccess(result);
-    setButtonFeedback(kind, '✓ 완료', 'success');
     setActionStatus(options.successMessage, 'success');
   } catch (error) {
-    console.error(`[KU LMS Helper] ${kind} extraction error:`, error);
-    setButtonFeedback(kind, '✗ 실패', 'error');
-    setActionStatus(
-      error instanceof Error ? error.message : options.errorMessage,
-      'error',
-    );
+    console.error('[KU LMS Helper] quiz extraction error:', error);
+    setActionStatus(options.errorMessage, 'error');
   }
 
   await delay(BUTTON_RESET_DELAY_MS);
   resetActionFeedback();
 }
 
-async function initializePopup(): Promise<void> {
-  console.log('[KU LMS Helper] Initializing popup...');
-
-  showState('loading');
-  resetActionFeedback();
-
-  try {
-    const pageInfo = await queryPageInfo();
-    console.log('[KU LMS Helper] Received page info:', pageInfo);
-    showState('ready');
-  } catch (error) {
-    console.error('[KU LMS Helper] Error:', error);
-    showError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
-  }
-}
-
 async function handleExtractQuiz(): Promise<void> {
   console.log('[KU LMS Helper] Extract quiz clicked');
 
-  await runActionWithFeedback<QuizExtraction>('quiz', {
-    loadingMessage: '퀴즈를 추출하고 있습니다...',
+  await runActionWithFeedback<QuizExtraction>({
+    loadingMessage: '추출 중...',
     successMessage: '완료',
-    errorMessage: '퀴즈 추출 중 오류가 발생했습니다.',
+    errorMessage: '실패',
     action: async () => {
       const response = await sendMessageToActiveTab<QuizExtractionResultMessage>({ type: 'EXTRACT_QUIZ' });
       if (response.type !== 'QUIZ_EXTRACTION_RESULT') {
@@ -393,38 +320,32 @@ async function handleExtractQuiz(): Promise<void> {
   });
 }
 
-async function handleExtractTranscript(): Promise<void> {
-  console.log('[KU LMS Helper] Extract transcript clicked');
-
-  await runActionWithFeedback<TranscriptDocument>('transcript', {
-    loadingMessage: '자막을 추출하고 있습니다...',
-    successMessage: '완료',
-    errorMessage: '자막 추출 중 오류가 발생했습니다.',
-    action: async () => {
-      const response = await sendMessageToActiveTab<TranscriptExtractionResultMessage>({ type: 'EXTRACT_TRANSCRIPT' });
-      if (response.type !== 'TRANSCRIPT_EXTRACTION_RESULT') {
-        throw new Error('자막 추출 응답 형식이 올바르지 않습니다.');
-      }
-
-      return response.data;
-    },
-    onSuccess: (result) => {
-      downloadTranscriptAsFile(result, 'text');
-    },
-  });
-}
-
 function setupEventListeners(): void {
   elements.themeToggleBtn?.addEventListener('click', cycleThemePreference);
   elements.extractQuizBtn?.addEventListener('click', () => {
     void handleExtractQuiz();
   });
-  elements.extractTranscriptBtn?.addEventListener('click', () => {
-    void handleExtractTranscript();
-  });
   elements.retryBtn?.addEventListener('click', () => {
     void initializePopup();
   });
+}
+
+function initializePopup(): void {
+  console.log('[KU LMS Helper] Initializing popup...');
+
+  showState('loading');
+  resetActionFeedback();
+
+  void (async () => {
+    try {
+      const pageInfo = await queryPageInfo();
+      console.log('[KU LMS Helper] Received page info:', pageInfo);
+      showState('ready');
+    } catch (error) {
+      console.error('[KU LMS Helper] Error:', error);
+      showError(error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.');
+    }
+  })();
 }
 
 function main(): void {
@@ -432,7 +353,7 @@ function main(): void {
 
   initializeTheme();
   setupEventListeners();
-  void initializePopup();
+  initializePopup();
 
   console.log('[KU LMS Helper] Popup initialized');
 }

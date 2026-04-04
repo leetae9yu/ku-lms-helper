@@ -3,9 +3,8 @@
  */
 
 import type { QuizExtraction } from './quiz/types';
-import type { TranscriptDocument } from './transcript/types';
 
-export type PageType = 'quiz' | 'transcript' | 'unknown';
+export type PageType = 'quiz' | 'unknown';
 
 /**
  * Message interface for communication between content script and popup
@@ -28,18 +27,9 @@ export interface ExtractQuizRequest {
   type: 'EXTRACT_QUIZ';
 }
 
-export interface ExtractTranscriptRequest {
-  type: 'EXTRACT_TRANSCRIPT';
-}
-
 export interface QuizExtractionResultMessage {
   type: 'QUIZ_EXTRACTION_RESULT';
   data: QuizExtraction;
-}
-
-export interface TranscriptExtractionResultMessage {
-  type: 'TRANSCRIPT_EXTRACTION_RESULT';
-  data: TranscriptDocument;
 }
 
 export interface ErrorResponseMessage {
@@ -52,13 +42,11 @@ export interface ErrorResponseMessage {
 export type ExtensionMessage =
   | PageInfoMessage
   | PageInfoRequest
-  | ExtractQuizRequest
-  | ExtractTranscriptRequest;
+  | ExtractQuizRequest;
 
 export type ExtensionResponse =
   | PageInfoMessage
   | QuizExtractionResultMessage
-  | TranscriptExtractionResultMessage
   | ErrorResponseMessage;
 
 /**
@@ -97,57 +85,11 @@ export function isQuizPage(url: string = window.location.href): boolean {
 }
 
 /**
- * Check if the current page is a video/transcript page
- * Detects video pages by:
- * - URL containing lecture patterns
- * - Presence of video iframe
- * - Kucom video player
- */
-export function isVideoPage(url: string = window.location.href): boolean {
-  const urlLower = url.toLowerCase();
-
-  if (urlLower.includes('/lecture') || urlLower.includes('lecture')) {
-    return true;
-  }
-
-  if (typeof document !== 'undefined') {
-    const iframes = document.querySelectorAll('iframe');
-    for (const iframe of iframes) {
-      const src = iframe.src || '';
-      if (src.includes('kucom.korea.ac.kr') || src.includes('video') || src.includes('player')) {
-        return true;
-      }
-    }
-
-    const videoSelectors = [
-      'video',
-      '.video-js',
-      '.video-player',
-      '[data-testid="video"]',
-      '.lecture-video',
-      '#kollus-player',
-    ];
-
-    for (const selector of videoSelectors) {
-      if (document.querySelector(selector)) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
-/**
  * Detect the page type based on URL and DOM
  */
 export function detectPageType(url: string = window.location.href): PageType {
   if (isQuizPage(url)) {
     return 'quiz';
-  }
-
-  if (isVideoPage(url)) {
-    return 'transcript';
   }
 
   return 'unknown';

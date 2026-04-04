@@ -1,18 +1,15 @@
 /**
  * Content script page detector
- * Detects quiz and video pages on Korea University LMS
+ * Detects quiz pages on Korea University LMS
  */
 import { 
   PageType, 
   PageInfoMessage, 
-  detectPageType, 
-  getPageInfo,
-  isQuizPage,
-  isVideoPage 
+  isQuizPage
 } from '../lib/page-types';
 
 export type { PageType, PageInfoMessage };
-export { isQuizPage, isVideoPage };
+export { isQuizPage };
 
 /**
  * Detect quiz page with LMS-specific selectors
@@ -72,63 +69,6 @@ export function detectQuizPageLMS(): boolean {
 }
 
 /**
- * Detect video/transcript page with LMS-specific selectors
- */
-export function detectVideoPageLMS(): boolean {
-  // Korea University LMS video/lecture page selectors
-  const lmsVideoSelectors = [
-    // Video containers
-    'video',
-    '.video-js',
-    '.video-player',
-    // KU specific video platforms
-    '#kollus-player',
-    '[class*="kollus"]',
-    // Lecture content areas
-    '.lecture-content',
-    '.lecture-video',
-    // Iframes containing video
-    'iframe[src*="kucom.korea.ac.kr"]',
-    'iframe[src*="video"]',
-    'iframe[src*="player"]',
-    'iframe[src*="kollus"]'
-  ];
-  
-  for (const selector of lmsVideoSelectors) {
-    try {
-      const element = document.querySelector(selector);
-      if (element) {
-        console.log('[KU LMS Helper] Video detected via selector:', selector);
-        return true;
-      }
-    } catch (e) {
-      // Invalid selector, skip
-      continue;
-    }
-  }
-  
-  // Check URL patterns specific to KU LMS
-  const url = window.location.href.toLowerCase();
-  const videoUrlPatterns = [
-    '/lecture',
-    '/lectures/',
-    '/video',
-    '/videos/',
-    'lecture_id=',
-    'module_item_id=' // Often used for lecture content
-  ];
-  
-  for (const pattern of videoUrlPatterns) {
-    if (url.includes(pattern)) {
-      console.log('[KU LMS Helper] Video detected via URL pattern:', pattern);
-      return true;
-    }
-  }
-  
-  return false;
-}
-
-/**
  * Detect page type specifically for KU LMS
  */
 export function detectLMSPageType(): PageType {
@@ -136,12 +76,7 @@ export function detectLMSPageType(): PageType {
   if (detectQuizPageLMS()) {
     return 'quiz';
   }
-  
-  // Then check for video/lecture
-  if (detectVideoPageLMS()) {
-    return 'transcript';
-  }
-  
+
   return 'unknown';
 }
 

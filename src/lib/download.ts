@@ -1,4 +1,4 @@
-const FILENAME_SAFE_PATTERN = /[<>:"/\\|?*\u0000-\u001F]+/g;
+const FILENAME_SAFE_PATTERN = new RegExp('[<>:"/\\\\|?*\\x00-\\x1F]+', 'g');
 const WHITESPACE_PATTERN = /\s+/g;
 const MAX_FILENAME_LENGTH = 120;
 
@@ -27,7 +27,7 @@ export function sanitizeFilename(name: string): string {
 }
 
 export function generateFilename(
-  type: 'quiz' | 'transcript' | string,
+  type: 'quiz' | string,
   title: string,
   format: 'txt' | 'json',
 ): string {

@@ -8,35 +8,19 @@
   <body>
     <div id="app" data-page-state="loading" data-busy="false">
       <header class="popup-header">
-        <div class="brand-block">
-          <p class="brand-kicker">고려대 LMS 도우미</p>
-          <h1>KU LMS Helper</h1>
-        </div>
+        <h1>KU LMS Helper</h1>
 
         <div class="header-actions">
           <span class="version">v0.1.0</span>
-          <div class="tooltip-anchor">
-            <button
-              id="theme-toggle-btn"
-              class="icon-button theme-toggle"
-              type="button"
-              aria-label="테마 전환"
-              aria-describedby="theme-toggle-tooltip"
-            >
-              <span id="theme-toggle-icon" class="theme-toggle-icon" aria-hidden="true">◐</span>
-            </button>
-            <span id="theme-toggle-tooltip" class="tooltip" role="tooltip">
-              시스템 테마를 따르거나 직접 전환할 수 있습니다.
-            </span>
-          </div>
+          <button id="theme-toggle-btn" class="theme-toggle" type="button" aria-label="테마 전환">
+            테마
+          </button>
         </div>
       </header>
 
       <main class="popup-body">
         <div id="loading-state" class="state-container" role="status" aria-live="polite">
-          <div class="state-icon state-icon-loading" aria-hidden="true">
-            <div class="loading-spinner"></div>
-          </div>
+          <div class="loading-spinner" aria-hidden="true"></div>
           <h2>페이지 분석 중</h2>
           <p class="state-message">현재 탭의 콘텐츠를 확인하고 준비하고 있습니다.</p>
           <div class="loading-progress" aria-hidden="true">
@@ -45,22 +29,15 @@
         </div>
 
         <div id="ready-state" class="state-container hidden" hidden>
-          <div class="state-icon" aria-hidden="true">✨</div>
           <h2>고려대 LMS 페이지가 감지되었습니다</h2>
-          <p class="state-description">원하는 항목을 선택해 바로 추출을 시도하세요.</p>
+          <p class="state-description">퀴즈를 추출할 수 있습니다.</p>
           <div class="extract-actions">
-            <button id="extract-quiz-btn" class="action-button primary" type="button">
-              📝 퀴즈 추출하기
-            </button>
-            <button id="extract-transcript-btn" class="action-button primary" type="button">
-              🎥 자막 추출하기
-            </button>
+            <button id="extract-quiz-btn" class="action-button primary" type="button">퀴즈 추출하기</button>
           </div>
           <p id="action-status" class="action-status hidden" role="status" aria-live="polite" hidden></p>
         </div>
 
         <div id="error-state" class="state-container hidden" hidden>
-          <div class="state-icon" aria-hidden="true">⚠️</div>
           <h2>오류 발생</h2>
           <p id="error-message" class="state-description error-text">
             페이지 정보를 가져올 수 없습니다.

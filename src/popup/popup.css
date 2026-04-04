@@ -50,7 +50,6 @@
   --popup-max-height: var(--size-popup-max-height);
   --popup-progress-max-width: var(--size-progress-max);
   --popup-tooltip-max-width: var(--size-tooltip-max);
-  --popup-state-icon-glyph-size: var(--size-state-icon-glyph);
   --popup-spinner-stroke: var(--size-spinner-stroke);
   --popup-spinner-stroke-compact: var(--size-spinner-stroke-compact);
   --popup-motion-fast: var(--motion-fast);
@@ -117,20 +116,6 @@ body {
   color: var(--color-text-inverse);
 }
 
-.brand-block {
-  display: grid;
-  gap: var(--popup-space-1);
-}
-
-.brand-kicker {
-  margin: 0;
-  font-size: var(--popup-font-size-xs);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.8;
-}
-
 .popup-header h1 {
   margin: 0;
   font-family: var(--popup-font-family-heading);
@@ -178,26 +163,6 @@ body {
 .state-container {
   padding: var(--popup-space-6) var(--popup-space-4) var(--popup-space-4);
   text-align: center;
-}
-
-.state-icon {
-  display: grid;
-  place-items: center;
-  width: calc(var(--popup-space-7) + var(--popup-space-6));
-  height: calc(var(--popup-space-7) + var(--popup-space-6));
-  margin: 0 auto var(--popup-space-3);
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--popup-color-accent) 28%, transparent), transparent 60%),
-    var(--popup-color-brand-soft);
-  font-size: var(--popup-state-icon-glyph-size);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--popup-color-brand) 10%, transparent);
-}
-
-.state-icon-loading {
-  background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--popup-color-accent) 18%, transparent), transparent 60%),
-    color-mix(in srgb, var(--popup-color-brand-soft) 72%, var(--popup-color-surface-elevated));
 }
 
 .state-container h2 {
@@ -268,7 +233,7 @@ body {
 }
 
 .action-button,
-.icon-button {
+.theme-toggle {
   border: 1px solid transparent;
   font-family: inherit;
   transition:
@@ -312,7 +277,7 @@ body {
 
 .extract-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--popup-space-3);
   margin-top: var(--popup-space-4);
 }
@@ -338,7 +303,7 @@ body {
 }
 
 .action-button:disabled,
-.icon-button:disabled {
+.theme-toggle:disabled {
   cursor: not-allowed;
   opacity: 0.72;
   transform: none;
@@ -380,65 +345,20 @@ body {
   border-color: var(--popup-color-border-strong);
 }
 
-.icon-button {
-  display: inline-grid;
-  place-items: center;
-  width: var(--popup-icon-button-size);
-  height: var(--popup-icon-button-size);
-  padding: 0;
-  border-radius: 50%;
+.theme-toggle {
+  min-height: var(--popup-control-height);
+  padding-inline: var(--popup-space-3);
+  border-radius: var(--popup-radius-md);
   background: color-mix(in srgb, var(--color-text-inverse) 12%, transparent);
   color: var(--color-text-inverse);
   cursor: pointer;
   backdrop-filter: blur(12px);
 }
 
-.icon-button:hover:not(:disabled),
-.icon-button:focus-visible {
+.theme-toggle:hover:not(:disabled),
+.theme-toggle:focus-visible {
   transform: translateY(-1px);
   background: color-mix(in srgb, var(--color-text-inverse) 20%, transparent);
-}
-
-.theme-toggle-icon {
-  font-size: var(--popup-font-size-lg);
-  line-height: 1;
-}
-
-.tooltip-anchor {
-  position: relative;
-}
-
-.tooltip-anchor > .action-button {
-  width: 100%;
-}
-
-.tooltip {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + var(--popup-space-2));
-  z-index: 2;
-  width: max-content;
-  max-width: var(--popup-tooltip-max-width);
-  padding: var(--popup-space-2) var(--popup-space-3);
-  border: 1px solid var(--popup-color-border);
-  border-radius: var(--popup-radius-sm);
-  background: var(--popup-color-surface-elevated);
-  color: var(--popup-color-text-primary);
-  font-size: var(--popup-font-size-xs);
-  line-height: 1.45;
-  text-align: left;
-  box-shadow: var(--popup-shadow-card);
-  opacity: 0;
-  transform: translate(-50%, var(--popup-space-1));
-  pointer-events: none;
-  transition:
-    opacity var(--popup-motion-fast) var(--popup-ease-standard),
-    transform var(--popup-motion-fast) var(--popup-ease-standard);
-}
-
-.tooltip-anchor:is(:hover, :focus-within) .tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 
 @keyframes spin {
