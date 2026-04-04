@@ -95,23 +95,24 @@
 
 ### Transcript Extraction / 자막 추출
 
+**⚠️ Important / 중요:**
+Due to browser security policies (Same-Origin Policy), the extension **cannot access the video player directly**. You must **manually open the transcript panel** before extraction.
+
+브라우저 보안 정책(Same-Origin Policy)으로 인해 확장 프로그램이 **비디오 플레이어에 직접 접근할 수 없습니다**. 추출 전 **자막 패널을 수동으로 열어야** 합니다.
+
 **English:**
 1. Navigate to a lecture video page with subtitles
-2. Click the KU LMS Helper extension icon
-3. Click the **"자막 추출하기"** (Extract Transcript) button
-4. Select your output format:
-   - **TXT**: Clean text with timestamps
-   - **JSON**: Structured transcript data
-5. Download your transcript file
+2. **Click the transcript button** (자막) on the video player to open the transcript panel
+3. Click the KU LMS Helper extension icon
+4. Click the **"자막 추출하기"** (Extract Transcript) button
+5. The transcript file will automatically download
 
 **한국어:**
 1. 자막이 있는 강의 동영상 페이지로 이동하세요
-2. KU LMS Helper 확장 프로그램 아이콘을 클릭하세요
-3. **"자막 추출하기"** 버튼을 클릭하세요
-4. 출력 형식을 선택하세요:
-   - **TXT**: 타임스탬프가 포함된 깔끔한 텍스트
-   - **JSON**: 구조화된 자막 데이터
-5. 자막 파일을 다운로드하세요
+2. 비디오 플레이어에서 **자막 버튼(자막)을 클릭**하여 자막 패널을 여세요
+3. KU LMS Helper 확장 프로그램 아이콘을 클릭하세요
+4. **"자막 추출하기"** 버튼을 클릭하세요
+5. 자막 파일이 자동으로 다운로드됩니다
 
 ---
 
