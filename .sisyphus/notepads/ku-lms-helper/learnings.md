@@ -17,3 +17,6 @@
 - For transcript UX, auto-downloading TXT and replacing the preview with a compact success state avoids an unnecessary second click without affecting quiz preview/download flows.
 - KU LMS transcript extraction is most robust when it keeps polling `window.uniPlayerConfig` in the iframe for longer and only uses DOM transcript rows as a passive fallback, without trying to open the transcript panel itself.
 - If the popup removes preview panels entirely, button-local loading/success/error states plus one short status line are enough to preserve clear feedback while keeping the extension UI minimal.
+
+## 2026-04-04
+- KU LMS transcript extraction in the extension must scrape `#cs-script-list > li.cs-script-item` from the LMS page document only; cross-origin player iframes on `kucom.korea.ac.kr` are not script-accessible from the `mylms.korea.ac.kr` content script.

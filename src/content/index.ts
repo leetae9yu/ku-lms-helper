@@ -97,28 +97,26 @@ function handleMessage(
   }
 
   if (request.type === 'EXTRACT_TRANSCRIPT') {
-    void (async () => {
-      try {
-        const extraction = await extractTranscriptFromPage();
+    try {
+      const extraction = extractTranscriptFromPage();
 
-        if (extraction.itemCount === 0) {
-          sendResponse({
-            error: '자막을 찾지 못했습니다. 강의 플레이어가 완전히 로드된 뒤 다시 시도해주세요.',
-          });
-          return;
-        }
-
+      if (extraction.itemCount === 0) {
         sendResponse({
-          type: 'TRANSCRIPT_EXTRACTION_RESULT',
-          data: extraction,
+          error: '자막을 찾지 못했습니다. 강의 플레이어가 완전히 로드된 뒤 다시 시도해주세요.',
         });
-      } catch (error) {
-        console.error('[KU LMS Helper] Error extracting transcript:', error);
-        sendResponse({
-          error: error instanceof Error ? error.message : '자막 추출 중 오류가 발생했습니다.',
-        });
+        return true;
       }
-    })();
+
+      sendResponse({
+        type: 'TRANSCRIPT_EXTRACTION_RESULT',
+        data: extraction,
+      });
+    } catch (error) {
+      console.error('[KU LMS Helper] Error extracting transcript:', error);
+      sendResponse({
+        error: error instanceof Error ? error.message : '자막 추출 중 오류가 발생했습니다.',
+      });
+    }
 
     return true;
   }

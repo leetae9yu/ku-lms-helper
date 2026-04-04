@@ -11,8 +11,3 @@ export interface TranscriptDocument {
   itemCount: number;
   items: TranscriptItem[];
 }
-
-export interface CaptionPayload {
-  language: string;
-  vttText: string;
-}
